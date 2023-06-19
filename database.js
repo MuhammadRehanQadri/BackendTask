@@ -1,7 +1,6 @@
 const sqlite3 = require('sqlite3');
 
-// const db = new sqlite3.Database(':memory:');
-const db = new sqlite3.Database('./comera3');
+const db = new sqlite3.Database(':memory:');
 
 const run = (query) => {
   return new Promise((resolve, reject) => {
