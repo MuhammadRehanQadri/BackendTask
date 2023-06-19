@@ -2,42 +2,42 @@ const dbWrapper = require('./database');
 const db = require('./database').db;
 
 const init = async () => {
-  // await db.run('CREATE TABLE Users (id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(32));');
-  // await db.run('CREATE TABLE Friends (id INTEGER PRIMARY KEY AUTOINCREMENT, userId int, friendId int);');
-  // const users = [];
-  // const names = ['foo', 'bar', 'baz'];
-  // for (i = 0; i < 5; ++i) {
-  //   let n = i;
-  //   let name = '';
-  //   for (j = 0; j < 3; ++j) {
-  //     name += names[n % 3];
-  //     n = Math.floor(n / 3);
-  //     name += n % 10;
-  //     n = Math.floor(n / 10);
-  //   }
-  //   users.push(name);
-  // }
-  // const friends = users.map(() => []);
-  // for (i = 0; i < friends.length; ++i) {
-  //   const n = 10 + Math.floor(90 * Math.random());
-  //   const list = [...Array(n)].map(() => Math.floor(friends.length * Math.random()));
-  //   list.forEach((j) => {
-  //     if (i === j) {
-  //       return;
-  //     }
-  //     if (friends[i].indexOf(j) >= 0 || friends[j].indexOf(i) >= 0) {
-  //       return;
-  //     }
-  //     friends[i].push(j);
-  //     friends[j].push(i);
-  //   });
-  // }
-  // console.log("Init Users Table...");
-  // await Promise.all(users.map((un) => db.run(`INSERT INTO Users (name) VALUES ('${un}');`)));
-  // console.log("Init Friends Table...");
-  // await Promise.all(friends.map((list, i) => {
-  //   return Promise.all(list.map((j) => db.run(`INSERT INTO Friends (userId, friendId) VALUES (${i + 1}, ${j + 1});`)));
-  // }));
+  await dbWrapper.run('CREATE TABLE Users (id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(32));');
+  await dbWrapper.run('CREATE TABLE Friends (id INTEGER PRIMARY KEY AUTOINCREMENT, userId int, friendId int);');
+  const users = [];
+  const names = ['foo', 'bar', 'baz'];
+  for (i = 0; i < 27000; ++i) {
+    let n = i;
+    let name = '';
+    for (j = 0; j < 3; ++j) {
+      name += names[n % 3];
+      n = Math.floor(n / 3);
+      name += n % 10;
+      n = Math.floor(n / 10);
+    }
+    users.push(name);
+  }
+  const friends = users.map(() => []);
+  for (i = 0; i < friends.length; ++i) {
+    const n = 10 + Math.floor(90 * Math.random());
+    const list = [...Array(n)].map(() => Math.floor(friends.length * Math.random()));
+    list.forEach((j) => {
+      if (i === j) {
+        return;
+      }
+      if (friends[i].indexOf(j) >= 0 || friends[j].indexOf(i) >= 0) {
+        return;
+      }
+      friends[i].push(j);
+      friends[j].push(i);
+    });
+  }
+  console.log("Init Users Table...");
+  await Promise.all(users.map((un) => dbWrapper.run(`INSERT INTO Users (name) VALUES ('${un}');`)));
+  console.log("Init Friends Table...");
+  await Promise.all(friends.map((list, i) => {
+    return Promise.all(list.map((j) => dbWrapper.run(`INSERT INTO Friends (userId, friendId) VALUES (${i + 1}, ${j + 1});`)));
+  }));
   console.log("Ready.");
 }
 module.exports.init = init;
@@ -99,9 +99,11 @@ const search = async (req, res) => {
   `;
 
   const sqlQuery5 = `
-    SELECT * FROM temp_friends
+    SELECT *, 1 sort_order FROM temp_friends
     UNION
-    SELECT *, 0 connection FROM Users where id NOT IN (SELECT id from temp_friends) and name like '${query}%';
+    SELECT *, 0 connection, 2 sort_order FROM Users where id NOT IN (SELECT id from temp_friends) and name like '${query}%'
+    ORDER BY sort_order ASC, connection asc
+    LIMIT 20;
   `;
 
   // db.all(sqlQuery1).then((results) => {
