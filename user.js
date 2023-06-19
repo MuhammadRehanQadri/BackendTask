@@ -51,7 +51,7 @@ const search = async (req, res) => {
   `;
 
   const sqlQuery1 = `
-    CREATE temp table IF NOT EXISTS temp_friends
+    CREATE temp table temp_friends
     as 
     SELECT Friends.friendId id, FriendsInfo."name" name, 1 as connection FROM Users
     INNER JOIN Friends
@@ -59,7 +59,7 @@ const search = async (req, res) => {
     AND Users.id = ${userId}
     INNER JOIN Users as FriendsInfo
     ON FriendsInfo.id = Friends.friendId
-    AND Users.name LIKE '${query}%';
+    AND FriendsInfo.name LIKE '${query}%';
   `;
 
   const sqlQuery2 = `
@@ -71,12 +71,37 @@ const search = async (req, res) => {
         AND Users.id IN (SELECT id from temp_friends)
         INNER JOIN Users as FriendsInfo
         ON FriendsInfo.id = Friends.friendId
-        AND Users.name LIKE '${query}%';`
+        AND Friends.friendId NOT IN (SELECT id from temp_friends)
+        AND FriendsInfo.name LIKE '${query}%';`
 
   const sqlQuery3 = `
+    INSERT INTO temp_friends
+    
+      SELECT Friends.friendId id, FriendsInfo."name" name, 3 as connection 
+        FROM Users INNER JOIN Friends
+        ON Users.id = Friends.userId
+        AND Users.id IN (SELECT id from temp_friends WHERE connection = 2)
+        INNER JOIN Users as FriendsInfo
+        ON FriendsInfo.id = Friends.friendId
+        AND Friends.friendId NOT IN (SELECT id from temp_friends)
+        AND FriendsInfo.name LIKE '${query}%';`
+
+  const sqlQuery4 = `INSERT INTO temp_friends
+
+      SELECT Friends.friendId id, FriendsInfo."name" name, 4 as connection
+        FROM Users INNER JOIN Friends
+        ON Users.id = Friends.userId
+        AND Users.id IN (SELECT id from temp_friends WHERE connection = 3)
+        INNER JOIN Users as FriendsInfo
+        ON FriendsInfo.id = Friends.friendId
+        AND Friends.friendId NOT IN (SELECT id from temp_friends)
+        AND FriendsInfo.name LIKE '${query}%';
+  `;
+
+  const sqlQuery5 = `
     SELECT * FROM temp_friends
     UNION
-    SELECT *, 0 connection FROM Users where id NOT IN (SELECT id from temp_friends);
+    SELECT *, 0 connection FROM Users where id NOT IN (SELECT id from temp_friends) and name like 'f%';
   `;
 
   // db.all(sqlQuery1).then((results) => {
@@ -96,7 +121,9 @@ const search = async (req, res) => {
     db.all(sqlQuery0);
     db.all(sqlQuery1);
     db.all(sqlQuery2);
-    db.all(sqlQuery3, (err, results) => {
+    db.all(sqlQuery3);
+    db.all(sqlQuery4);
+    db.all(sqlQuery5, (err, results) => {
       res.statusCode = 200;
       res.json({
         success: true,
@@ -105,10 +132,8 @@ const search = async (req, res) => {
     });
   })
   // db.run(sqlQuery1).then((results) => {
-  //   // db.all(`SELECT id, name, id in (SELECT friendId from Friends where userId = ${userId}) as connection from Users where name LIKE '${query}%' LIMIT 20;`).then((results) => {
+  //   dbWrapper.all(`SELECT id, name, id in (SELECT friendId from Friends where userId = ${userId}) as connection from Users where name LIKE '${query}%' LIMIT 20;`).then((results) => {
   //   console.log('resuults', results)
-  //   db.run(sqlQuery2).then((results) => {
-  //     console.log('resuts2------->', results)
   //     res.statusCode = 200;
   //     res.json({
   //       success: true,
@@ -119,11 +144,6 @@ const search = async (req, res) => {
   //     res.statusCode = 500;
   //     res.json({success: false, error: err});
   //   });
-  // }).catch((err) => {
-  //   console.log('err----2!!!!>', err);
-  //   res.statusCode = 501;
-  //   res.json({success: false, error: err});
-  // });
 
   // res.statusCode = 200;
   //     res.json({
