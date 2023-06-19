@@ -101,7 +101,7 @@ const search = async (req, res) => {
   const sqlQuery5 = `
     SELECT * FROM temp_friends
     UNION
-    SELECT *, 0 connection FROM Users where id NOT IN (SELECT id from temp_friends) and name like 'f%';
+    SELECT *, 0 connection FROM Users where id NOT IN (SELECT id from temp_friends) and name like '${query}%';
   `;
 
   // db.all(sqlQuery1).then((results) => {
